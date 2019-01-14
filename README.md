@@ -18,6 +18,3 @@ Connection pooling, error and timeout handling, and principle of least privilege
 
 ## Final Exam
 Questions covering the contents of the class.
-
-Chapter 1: Driver Setup
-Database client configuration, basic reads.
