@@ -67,8 +67,9 @@ public class UserDao extends AbstractMFlixDao {
      * @return true if successful
      */
     public boolean createUserSession(String userId, String jwt) {
-        if (sessionsCollection.find(Filters.eq("jwt", jwt)).first() != null)
-            return false;
+
+        if (getUserSession(userId) != null)
+            return true;
 
         Session session = new Session();
         session.setUserId(userId);
@@ -84,8 +85,7 @@ public class UserDao extends AbstractMFlixDao {
      * @return User object or null.
      */
     public User getUser(String email) {
-        User user = usersCollection.find(Filters.eq("email", email)).first();
-        return user;
+        return usersCollection.find(Filters.eq("email", email)).first();
     }
 
     /**
@@ -128,7 +128,8 @@ public class UserDao extends AbstractMFlixDao {
         Bson eqEmail = Filters.eq("email", email);
         User user = usersCollection.find(eqEmail).first();
         if(user == null){
-            throw new IncorrectDaoOperation("User Does Not Exists!");
+//            throw new IncorrectDaoOperation("User Does Not Exists!");
+            return false;
         }
 
         user = usersCollection.findOneAndUpdate(eqEmail, Updates.set("preferences", userPreferences));
