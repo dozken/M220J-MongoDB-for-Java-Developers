@@ -76,10 +76,8 @@ public class MovieDao extends AbstractMFlixDao {
         pipeline.add(match);
         pipeline.add(lookupComments);
         pipeline.add(sortCommentDateDesc);
-        // TODO> Ticket: Get Comments - implement the lookup stage that allows the comments to
-        // retrieved with Movies.
-        Document movie = moviesCollection.aggregate(pipeline).first();
 
+        Document movie = moviesCollection.aggregate(pipeline).first();
         return movie;
     }
 
