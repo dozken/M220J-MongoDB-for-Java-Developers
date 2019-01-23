@@ -6,6 +6,8 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
+import com.mongodb.client.result.DeleteResult;
+import com.mongodb.client.result.UpdateResult;
 import mflix.api.models.Comment;
 import mflix.api.models.Critic;
 import org.bson.Document;
@@ -20,6 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.IllformedLocaleException;
 import java.util.List;
 
@@ -75,22 +78,10 @@ public class CommentDao extends AbstractMFlixDao {
      * returns the resulting Comment object.
      */
     public Comment addComment(Comment comment) {
-        if (comment == null) {
-            throw new IncorrectDaoOperation("Comment is empty");
+        if ( comment.getId()==null || comment.getId().isEmpty()) {
+            throw new IncorrectDaoOperation("Comment objects need to have an id field set.");
         }
-        if (comment.getId() == null) {
-            throw new IncorrectDaoOperation("To Create Id Must Be Empty");
-        }
-        try {
-            commentCollection.insertOne(comment);
-        } catch (Exception ex) {
-            throw new IncorrectDaoOperation("Could save comment");
-        }
-
-        // TODO> Ticket - Update User reviews: implement the functionality that enables adding a new
-        // comment.
-        // TODO> Ticket - Handling Errors: Implement a try catch block to
-        // handle a potential write exception when given a wrong commentId.
+        commentCollection.insertOne(comment);
         return comment;
     }
 
@@ -108,37 +99,24 @@ public class CommentDao extends AbstractMFlixDao {
      * @return true if successfully updates the comment text.
      */
     public boolean updateComment(String commentId, String text, String email) {
-        if (commentId == null) {
-            throw new IncorrectDaoOperation("To update, commentId must not be null");
+            Bson filter = Filters.and(
+                Filters.eq("email", email),
+                Filters.eq("_id", new ObjectId(commentId)));
+        Bson update = Updates.combine(Updates.set("text", text),
+                Updates.set("date", new Date())) ;
+        UpdateResult res = commentCollection.updateOne(filter, update);
+
+        if(res.getMatchedCount() > 0){
+
+            if (res.getModifiedCount() != 1){
+                log.warn("Comment `{}` text was not updated. Is it the same text?");
+            }
+
+            return true;
         }
-        if (email == null) {
-            throw new IncorrectDaoOperation("To update, user email must not be null");
-        }
-
-
-        // TODO> Ticket - Update User reviews: implement the functionality that enables updating an
-        // user own comments
-
-        Bson eqIdAndEmail = and(eq("_id", new ObjectId(commentId)), eq("email", email));
-
-        if(commentCollection.find(eqIdAndEmail).first() == null){
-            return false;
-        }
-        Bson updateText = Updates.set("text", text);
-        Comment oneAndUpdate = commentCollection.findOneAndUpdate(eqIdAndEmail, updateText);
-        return  oneAndUpdate!=null;
-//        long modifiedCount;
-//        try {
-//            commentCollection.updateOne(eqIdAndEmail, updateText).getModifiedCount();
-//            return true;
-//        } catch (Exception ex) {
-//            throw new IncorrectDaoOperation(ex.getMessage());
-//        }
-
-
-        // TODO> Ticket - Handling Errors: Implement a try catch block to
-        // handle a potential write exception when given a wrong commentId.
-//        return false;
+        log.error("Could not update comment `{}`. Make sure the comment is owned by `{}`",
+                commentId, email);
+        return false;
     }
 
     /**
@@ -149,28 +127,22 @@ public class CommentDao extends AbstractMFlixDao {
      * @return true if successful deletes the comment.
      */
     public boolean deleteComment(String commentId, String email) {
-        if(commentId.isEmpty())
-           throw new IllegalArgumentException();
-
-
-        // TODO> Ticket Delete Comments - Implement the method that enables the deletion of a user
-        // comment
-        // TIP: make sure to match only users that own the given commentId
-        // TODO> Ticket Handling Errors - Implement a try catch block to
-        // handle a potential write exception when given a wrong commentId.
-        Bson find = and(eq("_id", new ObjectId(commentId)), eq("email", email));
-
-//        if(commentCollection.e(find).==null)
-//            return false;
-//        commentCollection.aggregate(comment_id, email).;
-        long comment;
-        try {
-            comment = commentCollection.deleteOne(find).getDeletedCount();
-        }catch (Exception ex){
-            throw  new IncorrectDaoOperation(ex.getMessage());
+        // Create a delete filter that includes the commentId and owner email
+        Bson filter = Filters.and(
+                Filters.eq("email", email),
+                Filters.eq("_id", new ObjectId(commentId))
+        );
+        // Call deleteOne()
+        DeleteResult res = commentCollection.deleteOne(filter);
+        // in case the delete count is different than one the document
+        // either does not exist or it does not match the email + _id filter.
+        if (res.getDeletedCount()!=1){
+            log.warn("Not able to delete comment `{}` for user `{}`. User" +
+                            " does not own comment or already deleted!",
+                    commentId, email);
+            return false;
         }
-
-        return comment == 1;
+        return true;
     }
 
     /**
