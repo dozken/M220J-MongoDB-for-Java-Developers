@@ -12,6 +12,7 @@ import java.text.DateFormat;
 import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,6 +28,7 @@ public class Migrator {
   private static UpdateOneModel<Document> transformRating(Document doc) {
     try {
       String imdbRating = doc.get("imdb", Document.class).getString("rating");
+//      int imdbRatingInt = doc.get("imdb", Document.class).getInteger("rating");
 
       if (imdbRating == null) {
         return null;
@@ -36,10 +38,13 @@ public class Migrator {
       if (!"".equals(imdbRating)) {
         rating = Integer.valueOf(imdbRating);
       }
+
+
+//      double ratingDouble = imdbRatingInt;
       // TODO> Ticket: Migration - define the UpdateOneModel object for
       // the rating type cleanup.
-      return new UpdateOneModel<Document>(new Document(), new
-      Document());
+      return new UpdateOneModel<Document>(Filters.eq("_id", doc.getObjectId("_id")),
+              Updates.set("imdb.rating", rating));
     } catch (NumberFormatException e) {
       System.out.println(
           MessageFormat.format(
@@ -88,17 +93,18 @@ public class Migrator {
 
     // set your MongoDB Cluster connection string
     // TODO> Ticket: Migration - set the cluster connection string.
-    String mongoUri = "";
+    String mongoUri = "mongodb+srv://m220student:m220password@mflix-losos.mongodb.net";
 
     // instantiate database and collection objects
     MongoDatabase mflix = MongoClients.create(mongoUri).getDatabase("mflix");
     MongoCollection<Document> movies = mflix.getCollection("movies");
-    Bson dateStringFilter = null;
+    Bson dateStringFilter = Filters.type("lastupdated", "string");
     // TODO> Ticket: Migration - create a query filter that finds all
     // documents that are required to be updated and the correct date
     // format pattern
-    String datePattern = "";
+    String datePattern = "yyyy-MM-dd HH:mm:ss";
     Document queryFilter = new Document();
+
     SimpleDateFormat dateFormat = new SimpleDateFormat(datePattern);
 
     // create list of bulkWrites to be applied.
@@ -106,7 +112,6 @@ public class Migrator {
 
     // iterate over the documents and apply the transformations.
     for (Document doc : movies.find(dateStringFilter)) {
-
       // Apply lastupdate string to date conversion
       WriteModel<Document> updateDate = transformDates(doc, dateFormat);
       if (updateDate != null) {
@@ -116,7 +121,7 @@ public class Migrator {
 
     // TODO> Ticket: Migration - create a query filter that finds
     // documents where `imdb.rating` is of type string
-    Bson ratingStringFilter = new Document();
+    Bson ratingStringFilter = Filters.type("imdb.rating", "string");
     for (Document doc : movies.find(ratingStringFilter)) {
       // Apply "imdb.rating" string to number conversion
       WriteModel<Document> updateRating = transformRating(doc);
@@ -127,7 +132,8 @@ public class Migrator {
 
     // execute the bulk update
     // TODO> Ticket: Migration - set the bulkWrite options
-    BulkWriteOptions bulkWriteOptions = null;
+    BulkWriteOptions bulkWriteOptions = new BulkWriteOptions();
+    bulkWriteOptions.ordered(false);
     if (bulkWrites.isEmpty()) {
       System.out.println("Nothing to update!");
       System.exit(0);
