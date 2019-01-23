@@ -24,9 +24,14 @@ public class MongoDBConfiguration {
 
     ConnectionString connString = new ConnectionString(connectionString);
 
+
     //TODO> Ticket: Handling Timeouts - configure the expected
     // WriteConcern `wtimeout` and `connectTimeoutMS` values
     MongoClient mongoClient = MongoClients.create(connectionString);
+    // done it application.properties
+//    mongoClient.
+//    mongoClient.setWriteConcern(new WriteConcern(0, 10));
+
 
     return mongoClient;
   }

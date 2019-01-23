@@ -17,6 +17,7 @@ import java.util.List;
 import static com.mongodb.client.model.Aggregates.lookup;
 import static com.mongodb.client.model.Aggregates.sort;
 import static com.mongodb.client.model.Filters.all;
+import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Projections.fields;
 import static com.mongodb.client.model.Projections.include;
 import static com.mongodb.client.model.Sorts.descending;
@@ -52,7 +53,13 @@ public class MovieDao extends AbstractMFlixDao {
         //TODO> Ticket: Handling Errors - implement a way to catch a
         //any potential exceptions thrown while validating a movie id.
         //Check out this method's use in the method that follows.
-        return true;
+        boolean valid = false;
+        try {
+            valid = ObjectId.isValid(movieId);
+        }catch (Exception ex){
+            System.out.println(ex.getMessage());
+        }
+        return valid;
     }
 
     /**
