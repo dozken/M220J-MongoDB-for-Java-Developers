@@ -1,6 +1,7 @@
 package mflix.api.daos;
 
 import com.mongodb.MongoClientSettings;
+import com.mongodb.ReadConcern;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Aggregates;
@@ -30,7 +31,12 @@ import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
-
+import java.util.Arrays;
+import static com.mongodb.client.model.Aggregates.group;
+import static com.mongodb.client.model.Aggregates.limit;
+import static com.mongodb.client.model.Aggregates.sort;
+import static com.mongodb.client.model.Accumulators.sum;
+import static com.mongodb.client.model.Sorts.descending;
 @Component
 public class CommentDao extends AbstractMFlixDao {
 
@@ -160,6 +166,12 @@ public class CommentDao extends AbstractMFlixDao {
         // // guarantee for the returned documents. Once a commenter is in the
         // // top 20 of users, they become a Critic, so mostActive is composed of
         // // Critic objects.
+
+//        ReadConcern.MAJORITY;
+
+        List<Bson> pipeline = Arrays.asList(group("$email", sum("count", 1L)), sort(descending("count")), limit(20));
+
+        commentCollection.aggregate(pipeline, Critic.class).iterator().forEachRemaining(mostActive::add);
         return mostActive;
     }
 }
