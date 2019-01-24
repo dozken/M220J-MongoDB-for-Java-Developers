@@ -42,19 +42,20 @@ public abstract class AbstractMFlixDao {
     Document connectionStatus = this.mongoClient.getDatabase(MFLIX_DATABASE).runCommand(command);
 
     List authUserRoles =
-        ((Document) connectionStatus.get("authInfo")).get("authenticatedUserRoles", List.class);
+            ((Document) connectionStatus.get("authInfo")).get("authenticatedUserRoles", List.class);
 
     Map<String, Object> configuration = new HashMap<>();
 
     if (!authUserRoles.isEmpty()) {
-      configuration.put("userInfo", authUserRoles.get(0));
+      configuration.put("role", ((Document)authUserRoles.get(0)).getString(
+              "role"));
       configuration.put("pool_size", connString.getMaxConnectionPoolSize());
       configuration.put(
-          "wtimeout",
-          this.mongoClient
-              .getDatabase("mflix")
-              .getWriteConcern()
-              .getWTimeout(TimeUnit.MILLISECONDS));
+              "wtimeout",
+              this.mongoClient
+                      .getDatabase("mflix")
+                      .getWriteConcern()
+                      .getWTimeout(TimeUnit.MILLISECONDS));
     }
     return configuration;
   }
